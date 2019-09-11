@@ -3,9 +3,10 @@ package main
 import (
 	"flag"
 	"fmt"
-	"zubspace.com/hacker-bro/app"
 	"os"
 	"strconv"
+
+	"github.com/hacker-bro/app" // WTF: go help importpath
 )
 
 func main() {
@@ -24,8 +25,12 @@ func main() {
 	queryPtr := queryCommand.String("q", "", "Database query")
 
 	// Rank Flags
-	activityPtr := rankCommand.String("activity", "100", "Will order stories based on activity and only use the specified percentage of the top stories. Default 100 (=all stories).")
-	filterPtr := rankCommand.String("filter", "", "Story and comment filter")
+	filterPtr := rankCommand.String("filter", "", "Comment word filter")
+	rankConfPtr := rankCommand.String("conf", "", "Output config file path")
+	rankCommentLimitPtr := rankCommand.String("commentLimit", "", "Maximum number of comments to look at")
+
+	// Talk Flags
+	talkConfPtr := talkCommand.String("conf", "", "Input config file path")
 
 	if len(os.Args) < 2 || (os.Args[1] != "import" && os.Args[1] != "query" && os.Args[1] != "rank" && os.Args[1] != "status" && os.Args[1] != "talk") {
 		fmt.Println("Please provide a subcommand: import, query, rank, status")
@@ -34,15 +39,35 @@ func main() {
 
 	switch os.Args[1] {
 	case "import":
-		importCommand.Parse(os.Args[2:])
+		err := importCommand.Parse(os.Args[2:])
+		if err != nil {
+			fmt.Println("Failed to parse command")
+			os.Exit(1)
+		}
 	case "query":
-		queryCommand.Parse(os.Args[2:])
+		err := queryCommand.Parse(os.Args[2:])
+		if err != nil {
+			fmt.Println("Failed to parse command")
+			os.Exit(1)
+		}
 	case "rank":
-		rankCommand.Parse(os.Args[2:])
+		err := rankCommand.Parse(os.Args[2:])
+		if err != nil {
+			fmt.Println("Failed to parse command")
+			os.Exit(1)
+		}
 	case "status":
-		statusCommand.Parse(os.Args[2:])
+		err := statusCommand.Parse(os.Args[2:])
+		if err != nil {
+			fmt.Println("Failed to parse command")
+			os.Exit(1)
+		}
 	case "talk":
-		talkCommand.Parse(os.Args[2:])
+		err := talkCommand.Parse(os.Args[2:])
+		if err != nil {
+			fmt.Println("Failed to parse command")
+			os.Exit(1)
+		}
 	default:
 		flag.PrintDefaults()
 		os.Exit(1)
@@ -67,13 +92,19 @@ func main() {
 
 	} else if rankCommand.Parsed() {
 
-		activity, err := strconv.Atoi(*activityPtr)
-		if err != nil || activity <= 0 || activity > 100 {
-			rankCommand.PrintDefaults()
-			os.Exit(1)
+		commentLimit := 0
+		var err error
+
+		if *rankCommentLimitPtr != "" {
+
+			commentLimit, err = strconv.Atoi(*rankCommentLimitPtr)
+			if err != nil {
+				importCommand.PrintDefaults()
+				os.Exit(1)
+			}
 		}
 
-		app.Rank(activity, *filterPtr)
+		app.Rank(*filterPtr, *rankConfPtr, commentLimit)
 
 	} else if statusCommand.Parsed() {
 
@@ -81,6 +112,6 @@ func main() {
 
 	} else if talkCommand.Parsed() {
 
-		app.Talk()
+		app.Talk(*talkConfPtr)
 	}
 }
